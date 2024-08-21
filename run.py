@@ -16,7 +16,7 @@ g.parse_file(nodes, positions)  # parse actual
 
 best_distance = float("inf")
 best_route = []
-for i in range(2000):
+for i in range(1000):
     g.run()
     if g.best_distance < best_distance:
         best_distance = g.best_distance

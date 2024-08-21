@@ -110,7 +110,7 @@ class TSPGraph:
             pos_u = self.positions[u]
             pos_v = self.positions[v]
             self.graph[u][v]["distance"] = euclidean_distance(pos_u, pos_v)
-            self.graph[u][v]["weight"] = 1 / self.graph[u][v]["distance"]
+            self.graph[u][v]["weight"] = 2 / self.graph[u][v]["distance"]
             self.graph[u][v]["pheromone"] = self.init_pheromone
             colors.append(generate_color(self.graph[u][v]["distance"]))
         return colors
@@ -129,7 +129,7 @@ class TSPGraph:
             ax=ax,
         )
 
-        fig.savefig('graph.png')
+        fig.savefig('eil51_graph.png')
         plt.close(fig)
         return fig
     
@@ -156,7 +156,7 @@ class TSPGraph:
             with_labels=False,
             ax=ax,
         )
-        fig.savefig('shortest_plot.png')
+        fig.savefig('eil51_shortest.png')
         plt.close(fig)
         return fig
 
@@ -214,7 +214,7 @@ class TSPGraph:
         ax.set_ylim(self.best_distance - (self.best_distance * 5 / 100) if self.best_distance != float("inf") else 1, 
                     self.initital_best_value + (self.initital_best_value * 5 / 100) if self.initital_best_value != float("inf") else 1)
         ax.set_title('Progress till now')
-        fig.savefig('progress_plot.png')
+        fig.savefig('eil51_2000.png')
 
         plt.close(fig)
         return fig
@@ -232,7 +232,7 @@ class TSPGraph:
                     self.initital_best_value + (self.initital_best_value * 5 / 100) if self.initital_best_value != float("inf") else 1)
         ax.set_title('Best till now')
         plt.close(fig)
-        fig.savefig('best_plot.png')
+        fig.savefig('eil51_best.png')
         return fig
 
 
