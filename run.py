@@ -29,6 +29,6 @@ for i in range(1000):
 print(f"Final: {best_distance}")
 print(best_route)
 g.shortest_plot()
-g.progress_plot()
+g.progress_plot()  # progress still has variance. Learning or not?
 g.best_plot()
 g.draw_graph()
