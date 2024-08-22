@@ -127,6 +127,7 @@ class TSPGraph:
             arrowstyle="-",
             with_labels=False,
             ax=ax,
+            width=0.3
         )
 
         fig.savefig('eil51_graph.png')
@@ -155,6 +156,7 @@ class TSPGraph:
             arrowstyle="-",
             with_labels=False,
             ax=ax,
+            # width=[self.graph[u][v]['pheromone'] for u, v in temp_graph.edges]
         )
         fig.savefig('eil51_shortest.png')
         plt.close(fig)
@@ -167,9 +169,16 @@ class TSPGraph:
     def update_global_pheromone(self, rho=0.1):
         delta_tau = {edge: 0 for edge in self.graph.edges}
 
+        # Update pheromone on only best path
         for i in range(len(self.best_route) - 1):
             u, v = self.best_route[i], self.best_route[i + 1]
             delta_tau[(u, v)] += 1 / self.best_distance
+
+        # Update pheromone of all paths covered by ants
+        # for ant in self.ants:
+        #     for i in range(len(ant.visited) - 1):
+        #         u, v = ant.visited[i], ant.visited[i + 1]
+        #         delta_tau[(u, v)] += 1 / ant.distance
 
         for u, v in self.graph.edges:
             pheromone_uv = self.graph[u][v]["pheromone"]

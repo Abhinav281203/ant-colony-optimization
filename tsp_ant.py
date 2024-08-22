@@ -7,7 +7,7 @@ import random
 
 
 class TSPAnt:
-    def __init__(self, id, source, model, init_pheromone, q_0=0.9, alpha=1.0, beta=5.0) -> None:
+    def __init__(self, id, source, model, init_pheromone, q_0=0.8, alpha=1.0, beta=5.0) -> None:
         self.id = id
         self.source = source
         self.visited = [source]
