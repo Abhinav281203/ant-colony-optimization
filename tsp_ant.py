@@ -5,9 +5,15 @@ import random
 
 # η -> heuristic of some means ( 1 / δ )  (weight)
 
+def get(mean, std):
+    x = random.gauss(mu=mean, sigma=std)
+    if x > 0:
+        return x
+    return get(mean, std)
+
 
 class TSPAnt:
-    def __init__(self, id, source, model, init_pheromone, q_0=0.8, alpha=1.0, beta=5.0) -> None:
+    def __init__(self, id, source, model, init_pheromone, q_0=0.9, alpha=1.0, beta=5.0) -> None:
         self.id = id
         self.source = source
         self.visited = [source]
@@ -15,8 +21,8 @@ class TSPAnt:
         self.current = source
         self.distance = 0
         self.model = model
-        self.alpha = alpha
-        self.beta = beta
+        self.alpha = get(1, 1)
+        self.beta = get(5, 1)
         self.init_pheromone = init_pheromone
         self.q_0 = q_0
 
