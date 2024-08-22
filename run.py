@@ -17,7 +17,7 @@ try:
 
     best_distance = float("inf")
     best_route = []
-    for i in range(3000):
+    for i in range(5000):
         g.run()
         if g.best_distance < best_distance:
             best_distance = g.best_distance
