@@ -1,15 +1,16 @@
-eil50
+eil50 problem
 
 best_distance_1 - 439.3748294675138
-Got the result but progress still has variance, not learning?
+Got the result but progress still has lot of variance?
 
 best_distance_2 - 436.7926020383196
 Increasing the exploitation percentage decreased variance in progress
 
 best_distance_3 - 430.86061990557937
-Setting the alpha and beta values from a distribution (alpha_mean - 1, beta_mean - 5) respectively
-has significantly improved performance. progress has 0 variance and as good as the best plot.
-reason unknown, premature convergence or global convergence?
+Setting the alpha and beta values of ants from a distribution (alpha_mean - 1, beta_mean - 5) 
+respectively has significantly improved performance. progress has 0 variance(?) and is as good 
+as the best plot.
+Reason unknown, premature convergence or global convergence?
 
 best_distance_4 - 428.9816471722067
-Give enough time (epochs)
+Given enough time (epochs/run)

@@ -2,26 +2,15 @@ import networkx as nx
 from tsp_ant import TSPAnt
 import matplotlib.pyplot as plt
 import random
-import time
 
 # δ (u, v) -> distance between 2 edges    (distance)
 # τ (u, v) -> desirability of edge        (pheromone)
-
 # η -> heuristic of some means ( 1 / δ )  (weight)
+# The shorter the distance higher the heuristic measure
 
 
 def euclidean_distance(p1, p2):
     return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
-
-
-def generate_color(weight):
-    weight = weight / 1.414
-    green = int((1 - weight) * 255)
-    red = int(weight * 255)
-    blue = 0
-    hex = f"#{red:02X}{green:02X}{blue:02X}"
-    return hex
-
 
 class TSPGraph:
     def __init__(self, n, m, initial_pheromone=10e-6):
@@ -30,41 +19,37 @@ class TSPGraph:
         self.graph = nx.random_geometric_graph(n=self.n_nodes, radius=2).to_directed()
         self.init_pheromone = initial_pheromone
 
-        # graph essentials
         self.positions = self.get_positions()
         self.cities = self.get_cities()
         self.ants = self.place_ants()
 
-        # visual
         self.colors = self.place_weight_and_get_color()
 
-        # performance
         self.running = True
         self.steps = 0
-        self.ants_distances = [[0] for _ in range(self.n_ants)]
         self.initital_best_value = float("inf")
         self.best_route = None
         self.best_distance = float("inf")
-
-        self.best_record = []
-        self.progress_record = []
+        self.record_best = []
+        self.record_progress = []
 
     def reset(self):
-        self.ants = self.place_ants()  # Different ant objects
-
+        # Reset doesn't involve changing distances measured so far
+        # Reset ants and set steps to 0
+        for ant in self.ants:
+            ant.reset()
         self.running = True
         self.steps = 0
-        self.ants_distances = [[0] for _ in range(self.n_ants)]
-        # self.best_route = None
-        # self.best_distance = float("inf")
 
     def get_positions(self):
+        # Get the positions of the nodes for calculating distances or drawing graph
         positions = {}
         for k, v in dict(self.graph.nodes.data()).items():
             positions[k] = v["pos"]
         return positions
-
+    
     def parse_file(self, nodes, positions):
+        # Using a tsp file to build the graph, all attributes needs to be set manually
         self.graph = nx.Graph().to_directed()
         for i in range(nodes):
             x, y = positions[i]
@@ -84,7 +69,6 @@ class TSPGraph:
         self.colors = self.place_weight_and_get_color()
         self.running = True
         self.steps = 0
-        self.ants_distances = [[0] for _ in range(self.n_ants)]
         self.best_route = None
         self.best_distance = float("inf")
 
@@ -93,18 +77,19 @@ class TSPGraph:
         for i in range(self.n_nodes):
             cities.add(i)
         return cities
-
+    
     def place_ants(self):
+        # Creates the ants and places them on a random empty city
         selected = set()
         ants = []
         for i in range(self.n_ants):
             city = random.choice(list(self.cities - selected))
             ant = TSPAnt(i, city, self, self.init_pheromone)
             ants.append(ant)
-            # print(f"Ant {i} placed in city {city}")
         return ants
-
+    
     def place_weight_and_get_color(self):
+        # Places the distance, weight and initial pheromone on each edge
         colors = []
         for u, v in self.graph.edges:
             pos_u = self.positions[u]
@@ -112,10 +97,65 @@ class TSPGraph:
             self.graph[u][v]["distance"] = euclidean_distance(pos_u, pos_v)
             self.graph[u][v]["weight"] = 2 / self.graph[u][v]["distance"]
             self.graph[u][v]["pheromone"] = self.init_pheromone
-            colors.append(generate_color(self.graph[u][v]["distance"]))
+            # colors.append(generate_color(self.graph[u][v]["distance"]))
         return colors
+    
+    def update_global_pheromone(self, rho=0.1):
+        # Updates the global pheromone on the shortest path found so far
+        # Evaporation is done on all the edges
+        # τ(i, j) = (1 - α) * τ(i, j) + α * Δτ(i, j)
+        # Where, Δτ(i, j) = 1/Lgb if edge (i, j) belongs to the global best tour, 0 otherwise
+        # Lgb = length of global best distance
+        delta_tau = {edge: 0 for edge in self.graph.edges}
 
-    def draw_graph(self):
+        for i in range(len(self.best_route) - 1):
+            u, v = self.best_route[i], self.best_route[i + 1]
+            delta_tau[(u, v)] += 1 / self.best_distance
+
+        for u, v in self.graph.edges:
+            pheromone_uv = self.graph[u][v]["pheromone"]
+            new_tau_ij = (1 - rho) * pheromone_uv + rho * delta_tau.get((u, v), 0)
+            self.graph[u][v]["pheromone"] = new_tau_ij
+
+    def collect_data(self):
+        this_run_best = float("inf")
+        for ant in self.ants:
+            if ant.distance < this_run_best:
+                this_run_best = ant.distance
+
+            if ant.distance < self.best_distance:
+                if self.initital_best_value == float("inf"):
+                    self.initital_best_value = ant.distance
+
+                self.best_distance = ant.distance
+                self.best_route = ant.visited
+
+        return this_run_best
+
+    def step(self):
+        # One step makes all the ants make a step (going to other cities)
+        if not self.running:
+            return
+
+        for ant in self.ants:
+            ant.step()
+
+        self.steps += 1
+        if self.steps >= self.n_nodes:  # Reached source again (one run)
+            this_run_best = self.collect_data()
+
+            self.record_best.append(self.best_distance)
+            self.record_progress.append(this_run_best)
+            self.update_global_pheromone()
+            self.running = False
+
+    def run(self):
+        # Executes the step until all the ants visits all cities and comes back to source
+        while self.running:
+            self.step()
+
+    def draw_graph(self, name="full_graph"):
+        # Draws the complete graph, colors are only used for a graph under unit square
         plt.clf()
         fig, ax = plt.subplots(figsize=(4, 4))
 
@@ -130,11 +170,12 @@ class TSPGraph:
             width=0.3
         )
 
-        fig.savefig('eil51_graph.png')
+        fig.savefig(f"{name}.png")
         plt.close(fig)
         return fig
     
-    def shortest_plot(self):
+    def draw_path(self, name="path_graph"):
+        # Creates a temp graph with the shortest path found by the ants and creates a figure
         if not self.best_route:
             return None
         
@@ -156,95 +197,47 @@ class TSPGraph:
             arrowstyle="-",
             with_labels=False,
             ax=ax,
-            # width=[self.graph[u][v]['pheromone'] for u, v in temp_graph.edges]
         )
-        fig.savefig('eil51_shortest.png')
+        fig.savefig(f"{name}.png")
         plt.close(fig)
         return fig
-
-    def run(self):
-        while self.running:
-            self.step()
-
-    def update_global_pheromone(self, rho=0.1):
-        delta_tau = {edge: 0 for edge in self.graph.edges}
-
-        # Update pheromone on only best path
-        for i in range(len(self.best_route) - 1):
-            u, v = self.best_route[i], self.best_route[i + 1]
-            delta_tau[(u, v)] += 1 / self.best_distance
-
-        # Update pheromone of all paths covered by ants
-        # for ant in self.ants:
-        #     for i in range(len(ant.visited) - 1):
-        #         u, v = ant.visited[i], ant.visited[i + 1]
-        #         delta_tau[(u, v)] += 1 / ant.distance
-
-        for u, v in self.graph.edges:
-            pheromone_uv = self.graph[u][v]["pheromone"]
-            new_tau_ij = (1 - rho) * pheromone_uv + rho * delta_tau.get((u, v), 0)
-            self.graph[u][v]["pheromone"] = new_tau_ij
-
-    def step(self):
-        if not self.running:
-            return
-
-        for ant in self.ants:
-            ant.step()
-            self.ants_distances[ant.id].append(ant.distance)
-
-        self.steps += 1
-        if self.steps >= self.n_nodes:  # Reached source again
-            current_best = float("inf")
-            for ant in self.ants:
-                if ant.distance < current_best:
-                    current_best = ant.distance
-                if ant.distance < self.best_distance:
-                    if self.initital_best_value == float("inf"):
-                        self.initital_best_value = ant.distance
-                    self.best_distance = ant.distance
-                    self.best_route = ant.visited
-
-            self.best_record.append(self.best_distance)
-            self.progress_record.append(current_best)
-            self.update_global_pheromone()
-            self.running = False
-
-    def progress_plot(self):
+    
+    def progress_plot(self, name="progress_plot"):
+        # Plots the best distance of each run
         plt.clf()
-        steps = range(0, len(self.progress_record))
+        steps = range(0, len(self.record_progress))
         fig, ax = plt.subplots(figsize=(4, 4))
 
-        # print(steps, self.progress_record)
-        ax.plot(steps, self.progress_record, linewidth=0.5)
+        ax.plot(steps, self.record_progress, linewidth=0.5)
         ax.set_xlabel('Time')
         ax.set_ylabel('Shortest distance')
         ax.set_xlim(0)
         ax.set_ylim(self.best_distance - (self.best_distance * 5 / 100) if self.best_distance != float("inf") else 1, 
                     self.initital_best_value + (self.initital_best_value * 5 / 100) if self.initital_best_value != float("inf") else 1)
         ax.set_title('Progress till now')
-        fig.savefig('eil51_2000.png')
+        fig.savefig(f"{name}.png")
 
         plt.close(fig)
         return fig
     
-    def best_plot(self):
+    def best_plot(self, name="best_plot"):
+        # Plots the best distance discovered among all runs so far
         plt.clf()
-        steps = range(0, len(self.best_record))
+        steps = range(0, len(self.record_best))
         fig, ax = plt.subplots(figsize=(4, 4))
 
-        ax.plot(steps, self.best_record, linewidth=0.5)
+        ax.plot(steps, self.record_best, linewidth=0.5)
         ax.set_xlabel('Time')
         ax.set_ylabel('Shortest distance')
         ax.set_xlim(0)
         ax.set_ylim(self.best_distance - (self.best_distance * 5 / 100) if self.best_distance != float("inf") else 1, 
                     self.initital_best_value + (self.initital_best_value * 5 / 100) if self.initital_best_value != float("inf") else 1)
         ax.set_title('Best till now')
+        fig.savefig(f"{name}.png")
         plt.close(fig)
-        fig.savefig('eil51_best.png')
         return fig
-
-
+    
+    
 if __name__ == "__main__":
     g = TSPGraph(20, 15)
     best_distance = float("inf")
